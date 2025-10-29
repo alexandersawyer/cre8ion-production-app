@@ -5,6 +5,9 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 
 export default function ShowDetailPage({ params }) {
   const router = useRouter()
@@ -55,68 +58,94 @@ export default function ShowDetailPage({ params }) {
   }
 
   if (loading) {
-    return <div className="p-8">Loading...</div>
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    )
   }
 
   if (!show) {
-    return <div className="p-8">Show not found</div>
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Show not found</p>
+      </div>
+    )
   }
 
   return (
-    <div className="p-8">
+    <div className="min-h-screen bg-background p-8">
       <div className="max-w-6xl mx-auto">
         {/* Show Header */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="text-sm text-gray-500 mb-1">{show.show_shortcode}</div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">{show.name}</h1>
-              <div className="flex gap-6 text-sm text-gray-600">
-                <span>📅 {show.start_date} - {show.end_date}</span>
-                <span>📍 {show.location}</span>
-                <span>🏢 {show.venue}</span>
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex items-start justify-between">
+              <div>
+                <CardDescription>{show.show_shortcode}</CardDescription>
+                <CardTitle className="text-3xl mb-4">{show.name}</CardTitle>
+                <div className="flex gap-4 text-sm text-muted-foreground">
+                  <div>
+                    <span className="font-medium text-foreground">Dates: </span>
+                    {show.start_date} - {show.end_date}
+                  </div>
+                  <div>
+                    <span className="font-medium text-foreground">Location: </span>
+                    {show.location}
+                  </div>
+                  <div>
+                    <span className="font-medium text-foreground">Venue: </span>
+                    {show.venue}
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline">
+                  Edit Show
+                </Button>
+                <Button
+                  onClick={() => setShowDeleteModal(true)}
+                  variant="destructive"
+                >
+                  Delete Show
+                </Button>
               </div>
             </div>
-            <div className="flex gap-2">
-              <button 
-                className="px-4 py-2 bg-cre8ion-blue text-white rounded hover:bg-cre8ion-dark-blue transition-colors"
-              >
-                Edit Show
-              </button>
-              <button 
-                onClick={() => setShowDeleteModal(true)}
-                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-              >
-                Delete Show
-              </button>
-            </div>
-          </div>
-        </div>
+          </CardHeader>
+        </Card>
 
         {/* Navigation Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Link 
+          <Link
             href={`/shows/${show.id}/schedule`}
-            className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 border border-gray-200"
+            className="group"
           >
-            <div className="text-4xl mb-3">📅</div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Production Schedule</h2>
-            <p className="text-sm text-gray-600">Manage session timings and production flow</p>
+            <Card className="h-full hover:border-primary transition-colors cursor-pointer">
+              <CardHeader>
+                <CardTitle className="group-hover:text-primary transition-colors">Production Schedule</CardTitle>
+                <CardDescription>Manage session timings and production flow</CardDescription>
+              </CardHeader>
+            </Card>
           </Link>
 
-          <div className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 border border-gray-200 opacity-50 cursor-not-allowed">
-            <div className="text-4xl mb-3">👥</div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Labor</h2>
-            <p className="text-sm text-gray-600">Assign crew and manage staffing</p>
-            <span className="text-xs text-gray-500 mt-2 block">Coming soon</span>
-          </div>
+          <Card className="opacity-50 cursor-not-allowed">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                Labor
+                <Badge variant="secondary">Coming soon</Badge>
+              </CardTitle>
+              <CardDescription>Assign crew and manage staffing</CardDescription>
+            </CardHeader>
+          </Card>
 
-          <div className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 border border-gray-200 opacity-50 cursor-not-allowed">
-            <div className="text-4xl mb-3">🎬</div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Equipment</h2>
-            <p className="text-sm text-gray-600">Track gear and technical requirements</p>
-            <span className="text-xs text-gray-500 mt-2 block">Coming soon</span>
-          </div>
+          <Card className="opacity-50 cursor-not-allowed">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                Equipment
+                <Badge variant="secondary">Coming soon</Badge>
+              </CardTitle>
+              <CardDescription>Track gear and technical requirements</CardDescription>
+            </CardHeader>
+          </Card>
         </div>
       </div>
 
@@ -130,10 +159,10 @@ export default function ShowDetailPage({ params }) {
 
       {/* Loading overlay during delete */}
       {deleting && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-8">
-            <p className="text-lg">Deleting show...</p>
-          </div>
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <Card className="p-8">
+            <p className="text-lg text-foreground">Deleting show...</p>
+          </Card>
         </div>
       )}
     </div>

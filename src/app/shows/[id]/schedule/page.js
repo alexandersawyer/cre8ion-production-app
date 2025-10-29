@@ -1,21 +1,34 @@
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 export const revalidate = 0
 
 export default async function ProductionSchedulePage({ params }) {
+  // Await params for Next.js 15
+  const resolvedParams = await params
+  
   // Fetch the show
   const { data: show } = await supabase
     .from('shows')
     .select('*')
-    .eq('id', params.id)
+    .eq('id', resolvedParams.id)
     .single()
 
   // Fetch schedule items for this show
   const { data: scheduleItems, error } = await supabase
     .from('schedule_items')
     .select('*')
-    .eq('show_id', params.id)
+    .eq('show_id', resolvedParams.id)
     .order('date', { ascending: true })
     .order('start_time', { ascending: true })
 
@@ -24,110 +37,125 @@ export default async function ProductionSchedulePage({ params }) {
   }
 
   return (
-    <div className="p-8">
+    <div className="min-h-screen bg-background p-8">
       <div className="max-w-7xl mx-auto">
         {/* Breadcrumb */}
-        <div className="mb-4 text-sm text-gray-600">
-          <Link href="/shows" className="hover:text-blue-600">Shows</Link>
+        <div className="mb-6 text-sm text-muted-foreground">
+          <Link href="/shows" className="hover:text-primary transition-colors">
+            Shows
+          </Link>
           {' > '}
-          <Link href={`/shows/${params.id}`} className="hover:text-blue-600">{show?.name}</Link>
+          <Link href={`/shows/${resolvedParams.id}`} className="hover:text-primary transition-colors">
+            {show?.name}
+          </Link>
           {' > '}
-          <span className="text-gray-900">Production Schedule</span>
+          <span className="text-foreground font-medium">Production Schedule</span>
         </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Production Schedule</h1>
-            <p className="text-gray-600 mt-1">{show?.name} ({show?.code})</p>
+            <h1 className="text-3xl font-bold text-foreground">Production Schedule</h1>
+            <p className="text-muted-foreground mt-1">
+              {show?.name} ({show?.code})
+            </p>
           </div>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-            + Add Schedule Item
-          </button>
+          <Button className="bg-[#009FE3] hover:bg-[#009FE3]/90 text-white">
+            Add Schedule Item
+          </Button>
         </div>
 
         {/* Schedule Table */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Start Time
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  End Time
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Location
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Notes
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {scheduleItems && scheduleItems.length > 0 ? (
-                scheduleItems.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{item.date}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{item.start_time}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{item.end_time}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{item.name}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{item.location}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-500">{item.notes}</div>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
-                    No schedule items yet. Click "+ Add Schedule Item" to get started.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <Card className="border shadow-sm">
+          <CardContent className="p-0">
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="font-medium">Date</TableHead>
+                    <TableHead className="font-medium">Start Time</TableHead>
+                    <TableHead className="font-medium">End Time</TableHead>
+                    <TableHead className="font-medium">Name</TableHead>
+                    <TableHead className="font-medium">Location</TableHead>
+                    <TableHead className="font-medium">Notes</TableHead>
+                    <TableHead className="w-[100px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {scheduleItems && scheduleItems.length > 0 ? (
+                    scheduleItems.map((item) => (
+                      <TableRow key={item.id} className="hover:bg-muted/50">
+                        <TableCell className="font-medium">{item.date}</TableCell>
+                        <TableCell className="text-muted-foreground">{item.start_time}</TableCell>
+                        <TableCell className="text-muted-foreground">{item.end_time}</TableCell>
+                        <TableCell>{item.name}</TableCell>
+                        <TableCell className="text-muted-foreground">{item.location}</TableCell>
+                        <TableCell className="text-muted-foreground max-w-[300px] truncate">
+                          {item.notes}
+                        </TableCell>
+                        <TableCell>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            className="hover:bg-accent"
+                          >
+                            Edit
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow className="hover:bg-transparent">
+                      <TableCell 
+                        colSpan={7} 
+                        className="h-32 text-center text-muted-foreground"
+                      >
+                        No schedule items yet. Click "Add Schedule Item" to get started.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Summary Stats */}
         {scheduleItems && scheduleItems.length > 0 && (
-          <div className="mt-6 grid grid-cols-3 gap-4">
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="text-sm text-gray-500">Total Items</div>
-              <div className="text-2xl font-bold text-gray-900">{scheduleItems.length}</div>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="text-sm text-gray-500">Unique Dates</div>
-              <div className="text-2xl font-bold text-gray-900">
-                {new Set(scheduleItems.map(item => item.date)).size}
-              </div>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="text-sm text-gray-500">Locations</div>
-              <div className="text-2xl font-bold text-gray-900">
-                {new Set(scheduleItems.map(item => item.location)).size}
-              </div>
-            </div>
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Total Items
+                </CardTitle>
+                <div className="text-3xl font-bold text-foreground mt-2">
+                  {scheduleItems.length}
+                </div>
+              </CardHeader>
+            </Card>
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Unique Dates
+                </CardTitle>
+                <div className="text-3xl font-bold text-foreground mt-2">
+                  {new Set(scheduleItems.map(item => item.date)).size}
+                </div>
+              </CardHeader>
+            </Card>
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Locations
+                </CardTitle>
+                <div className="text-3xl font-bold text-foreground mt-2">
+                  {new Set(scheduleItems.map(item => item.location)).size}
+                </div>
+              </CardHeader>
+            </Card>
           </div>
         )}
       </div>
     </div>
-  );
+  )
 }

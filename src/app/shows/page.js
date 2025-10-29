@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import NewShowForm from '@/components/NewShowForm'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 
 export default function ShowsPage() {
   const [shows, setShows] = useState([])
@@ -31,83 +33,75 @@ export default function ShowsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-background p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">All Shows</h1>
-            <p className="text-gray-600">Manage your production schedules, labor, and equipment</p>
+            <h1 className="text-4xl font-bold text-foreground mb-2">All Shows</h1>
+            <p className="text-muted-foreground">Manage your production schedules, labor, and equipment</p>
           </div>
-          <button
-            onClick={() => setShowForm(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            + Add New Show
-          </button>
+          <Button onClick={() => setShowForm(true)}>
+            Add New Show
+          </Button>
         </div>
 
         {/* Loading State */}
         {loading && (
-          <div className="text-center py-12 text-gray-500">Loading shows...</div>
+          <div className="text-center py-12 text-muted-foreground">Loading shows...</div>
         )}
 
         {/* Shows Grid */}
         {!loading && shows.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-500 mb-4">No shows yet. Create your first one!</p>
-            <button
-              onClick={() => setShowForm(true)}
-              className="px-4 py-2 bg-cre8ion-blue text-white rounded-lg hover:bg-blue-700"
-            >
-              + Add New Show
-            </button>
+            <p className="text-muted-foreground mb-4">No shows yet. Create your first one!</p>
+            <Button onClick={() => setShowForm(true)}>
+              Add New Show
+            </Button>
           </div>
         )}
 
         {!loading && shows.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {shows.map((show) => (
-              <Link 
-                key={show.id}
-                href={`/shows/${show.id}`}
-                className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 border border-gray-200"
-              >
-                <div className="mb-4">
-                  <div className="text-sm text-gray-500 mb-1">{show.show_shortcode}</div>
-                  <h2 className="text-xl font-semibold text-gray-900">{show.name}</h2>
-                </div>
-                
-                <div className="space-y-2 text-sm text-gray-600">
+              <Card key={show.id} className="flex flex-col">
+                <CardHeader>
+                  <CardDescription>{show.show_shortcode}</CardDescription>
+                  <CardTitle>{show.name}</CardTitle>
+                </CardHeader>
+                <CardContent className="flex-1 space-y-2 text-sm text-muted-foreground">
                   <div className="flex items-center">
-                    <span className="font-medium mr-2">📅</span>
+                    <span className="font-medium mr-2 text-foreground">Dates:</span>
                     <span>{show.start_date} - {show.end_date}</span>
                   </div>
                   <div className="flex items-center">
-                    <span className="font-medium mr-2">📍</span>
+                    <span className="font-medium mr-2 text-foreground">Location:</span>
                     <span>{show.location}</span>
                   </div>
                   <div className="flex items-center">
-                    <span className="font-medium mr-2">🏢</span>
+                    <span className="font-medium mr-2 text-foreground">Venue:</span>
                     <span>{show.venue_name}</span>
                   </div>
-                </div>
-
-                <div className="mt-4 w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors text-center">
-                  View Details
-                </div>
-              </Link>
+                </CardContent>
+                <CardFooter>
+                  <Link href={`/shows/${show.id}`} className="w-full">
+                    <Button variant="outline" className="w-full">
+                      View Details
+                    </Button>
+                  </Link>
+                </CardFooter>
+              </Card>
             ))}
           </div>
         )}
 
         {/* New Show Form Modal */}
         {showForm && (
-          <NewShowForm 
+          <NewShowForm
             onClose={() => {
               setShowForm(false)
               fetchShows() // Refresh the list
-            }} 
+            }}
           />
         )}
       </div>
