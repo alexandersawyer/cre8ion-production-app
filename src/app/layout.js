@@ -1,6 +1,7 @@
 import './globals.css'
 import { ThemeProvider } from '@/components/ui/theme-provider'
-import { Sidebar } from '@/components/Sidebar'
+import { AppSidebar } from '@/components/Sidebar'
+import { SidebarProvider } from '@/components/ui/sidebar'
 
 export const metadata = {
   title: 'Cre8ion Production App',
@@ -12,15 +13,12 @@ export default function RootLayout({ children }) {
     <html lang="en" suppressHydrationWarning>
       <body>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <div className="flex h-screen bg-background text-foreground">
-            {/* Sidebar */}
-            <Sidebar />
-
-            {/* Main Content */}
-            <main className="flex-1 overflow-auto bg-background">
+          <SidebarProvider>
+            <AppSidebar />
+            <main className="flex-1 overflow-auto bg-background w-full">
               {children}
             </main>
-          </div>
+          </SidebarProvider>
         </ThemeProvider>
       </body>
     </html>
