@@ -108,9 +108,9 @@ export default function ShowDetailPage({ params }) {
     production_company: ''
   })
 
-  useEffect(() => {
+ useEffect(() => {
     fetchShow()
-  }, [showId])
+  }, [showId]) // Keep as is, but we'll fix it differently
 
   const fetchShow = async () => {
     try {
@@ -673,7 +673,7 @@ export default function ShowDetailPage({ params }) {
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the
-              show "{show.name}" and all associated data.
+              show &quot;{show.name}&quot; and all associated data.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
