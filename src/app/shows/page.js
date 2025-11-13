@@ -116,12 +116,17 @@ export default function ShowsPage() {
                     )}
                   </CardContent>
                   <CardFooter>
-                    <Link href={`/shows/${show.id}`} className="w-full">
-                      <Button variant="outline" className="w-full bg-foreground text-background hover:opacity-90 transition-opacity">
-                        View Details
-                      </Button>
-                    </Link>
-                  </CardFooter>
+  <Button 
+    variant="outline" 
+    className="w-full bg-foreground text-background hover:opacity-90 transition-opacity"
+    onClick={() => {
+      console.log('Navigating to:', `/shows/${show.id}`)
+      window.location.href = `/shows/${show.id}`
+    }}
+  >
+    View Details
+  </Button>
+</CardFooter>
                 </Card>
               ))}
             </div>
