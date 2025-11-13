@@ -39,6 +39,14 @@ export default async function ProductionSchedulePage({ params }) {
     console.error('Error fetching schedule:', error)
   }
 
+  // Extract year from show dates for the date picker
+  // Priority: travel_start_date > start_date > current year
+  const showYear = show?.travel_start_date 
+    ? new Date(show.travel_start_date).getFullYear()
+    : show?.start_date
+    ? new Date(show.start_date).getFullYear()
+    : new Date().getFullYear()
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header with Sidebar Trigger + Breadcrumb */}
@@ -68,23 +76,22 @@ export default async function ProductionSchedulePage({ params }) {
       <div className="p-8">
         <div className="max-w-7xl mx-auto">
           {/* Page Header */}
-<div className="mb-8">
-  <h1 className="text-3xl font-bold text-foreground">
-    {show?.show_shortcode ? `${show.show_shortcode} ` : ''}Schedule
-  </h1>
-  <p className="text-muted-foreground mt-1">
-    All times {show?.timezone ? getTimezoneAbbr(show.timezone) : 'Local Time'}
-    {show?.timezone && ` | Current Local Time: ${getCurrentTimeInTimezone(show.timezone)}`}
-  </p>
-</div>
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-foreground">
+              {show?.show_shortcode ? `${show.show_shortcode} ` : ''}Schedule
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              All times {show?.timezone ? getTimezoneAbbr(show.timezone) : 'Local Time'}
+              {show?.timezone && ` | Current Local Time: ${getCurrentTimeInTimezone(show.timezone)}`}
+            </p>
+          </div>
 
           {/* Pass data to Client Component */}
           <ProductionScheduleTable 
             scheduleItems={scheduleItems || []} 
             showId={resolvedParams.id}
+            showYear={showYear}
           />
-
-
         </div>
       </div>
     </div>

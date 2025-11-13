@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'  
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent } from '@/components/ui/card'
@@ -14,20 +14,16 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { MoreHorizontal, Clock, Pencil } from 'lucide-react'
+import { MoreHorizontal, Clock, Pencil, Filter, Zap, X, Plus, Calendar as CalendarIcon } from 'lucide-react'
+import { Kbd } from '@/components/ui/kbd'
+import { Combobox } from '@/components/ui/combobox'
+import { DatePicker } from '@/components/ui/date-picker'
 import { formatTime } from '@/lib/time-utils'
 import { formatScheduleDate, formatScheduleDateHeader, groupScheduleItemsByDate } from '@/lib/date-utils'
 
@@ -46,59 +42,67 @@ const SESSION_TYPES = [
   'Cancelled'
 ]
 
-export default function ProductionScheduleTable({ scheduleItems, showId }) {
+const CREW_OPTIONS = [
+  'All Crews',
+  'Breakouts',
+  'Cre8ion',
+  'Featured',
+  'Main Stage',
+  'Reception / Parties',
+  'Second Stage'
+]
+
+export default function ProductionScheduleTable({ scheduleItems, showId, showYear }) {
   const router = useRouter()
   const [items, setItems] = useState(scheduleItems)
   const [filteredItems, setFilteredItems] = useState(scheduleItems)
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({})
   const [isAdding, setIsAdding] = useState(false)
+  const [quickEntryMode, setQuickEntryMode] = useState(false)
   const [timeFormat, setTimeFormat] = useState('24hr')
-  const [showDateHeaders, setShowDateHeaders] = useState(() => {
-    // Initialize from localStorage to prevent race condition
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('showDateHeaders')
-      return saved !== null ? saved === 'true' : true
-    }
-    return true
-  })
+  const [showDateHeaders, setShowDateHeaders] = useState(true)
   const [savedFilters, setSavedFilters] = useState([])
   const [activeFilter, setActiveFilter] = useState(null)
+  const [quickCrewFilter, setQuickCrewFilter] = useState('all')
+  
   const [newItemForm, setNewItemForm] = useState({
     session_type: 'Session',
     date: '',
     start_time: '',
     end_time: '',
     name: '',
+    crew: '',
     location: '',
     notes: ''
   })
 
-  // Sort schedule items by date and time - defined early so it can be used in useEffects
+  // Refs for keyboard navigation
+  const dateInputRef = useRef(null)
+  const quickEntryRefs = useRef({})
+
+  // Determine default year for date picker
+  const defaultYear = showYear || new Date().getFullYear()
+
   const sortScheduleItems = (itemsToSort) => {
     return [...itemsToSort].sort((a, b) => {
-      // First sort by date
       if (a.date !== b.date) {
         return a.date.localeCompare(b.date)
       }
-      // Then sort by start time
       return a.start_time.localeCompare(b.start_time)
     })
   }
 
-  // Sort initial items when component mounts or scheduleItems prop changes
   useEffect(() => {
     const sortedItems = sortScheduleItems(scheduleItems)
     setItems(sortedItems)
     setFilteredItems(sortedItems)
   }, [scheduleItems])
 
-  // Load saved filters from Supabase
   useEffect(() => {
     fetchSavedFilters()
   }, [])
 
-  // Load time format preference from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('timeFormat')
     if (saved) {
@@ -106,14 +110,23 @@ export default function ProductionScheduleTable({ scheduleItems, showId }) {
     }
   }, [])
 
-  // Save date headers preference when it changes (but not on initial render)
+  // Load showDateHeaders from localStorage after mount to avoid hydration mismatch
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('showDateHeaders')
+      if (saved !== null) {
+        setShowDateHeaders(saved === 'true')
+      }
+    }
+  }, [])
+
+  // Save date headers preference when it changes
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('showDateHeaders', showDateHeaders.toString())
     }
   }, [showDateHeaders])
 
-  // Load active filter from localStorage
   useEffect(() => {
     const savedFilterId = localStorage.getItem('activeFilterId')
     if (savedFilterId && savedFilters.length > 0) {
@@ -122,13 +135,24 @@ export default function ProductionScheduleTable({ scheduleItems, showId }) {
         applyFilter(filter)
       }
     } else if (savedFilters.length > 0) {
-      // Default to "All Items" filter
       const allItemsFilter = savedFilters.find(f => f.name === 'All Items')
       if (allItemsFilter) {
         applyFilter(allItemsFilter)
       }
     }
   }, [savedFilters, items])
+
+  useEffect(() => {
+    if (activeFilter) {
+      applyFilter(activeFilter)
+    }
+  }, [quickCrewFilter])
+
+  useEffect(() => {
+    if (quickEntryMode && dateInputRef.current) {
+      dateInputRef.current.focus()
+    }
+  }, [quickEntryMode])
 
   const fetchSavedFilters = async () => {
     const { data } = await supabase
@@ -145,17 +169,138 @@ export default function ProductionScheduleTable({ scheduleItems, showId }) {
     setActiveFilter(filter)
     localStorage.setItem('activeFilterId', filter.id.toString())
     
-    // Filter items based on session types
-    const filtered = items.filter(item => 
-      filter.session_types.includes(item.session_type)
-    )
-    // Always sort after filtering
+    let filtered = items
+
+    if (filter.session_types && filter.session_types.length > 0) {
+      filtered = filtered.filter(item => 
+        filter.session_types.includes(item.session_type)
+      )
+    }
+
+    if (filter.crews && filter.crews.length > 0) {
+      filtered = filtered.filter(item => 
+        filter.crews.includes(item.crew)
+      )
+    }
+
+    if (quickCrewFilter !== 'all') {
+      filtered = filtered.filter(item => item.crew === quickCrewFilter)
+    }
+
+    if (filter.locations && filter.locations.length > 0) {
+      filtered = filtered.filter(item => 
+        filter.locations.includes(item.location)
+      )
+    }
+
+    if (filter.date_range_start) {
+      filtered = filtered.filter(item => item.date >= filter.date_range_start)
+    }
+    if (filter.date_range_end) {
+      filtered = filtered.filter(item => item.date <= filter.date_range_end)
+    }
+
     setFilteredItems(sortScheduleItems(filtered))
   }
 
   const handleTimeFormatChange = (value) => {
     setTimeFormat(value)
     localStorage.setItem('timeFormat', value)
+  }
+
+  const handleQuickCrewFilter = (value) => {
+    setQuickCrewFilter(value)
+  }
+
+  const toggleQuickEntryMode = () => {
+    setQuickEntryMode(!quickEntryMode)
+    if (!quickEntryMode) {
+      setIsAdding(false)
+    }
+  }
+
+  const handleQuickEntryKeyDown = (e, fieldName) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSaveNewQuick()
+      return
+    }
+
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      setQuickEntryMode(false)
+      return
+    }
+
+    if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+      e.preventDefault()
+      duplicateLastRow()
+      return
+    }
+  }
+
+  const duplicateLastRow = () => {
+    if (items.length === 0) return
+    
+    const lastItem = items[items.length - 1]
+    setNewItemForm({
+      session_type: lastItem.session_type,
+      date: lastItem.date,
+      start_time: lastItem.start_time,
+      end_time: lastItem.end_time,
+      name: '',
+      crew: lastItem.crew,
+      location: lastItem.location,
+      notes: ''
+    })
+    
+    setTimeout(() => {
+      quickEntryRefs.current['name']?.focus()
+    }, 0)
+  }
+
+  const handleSaveNewQuick = async () => {
+    try {
+      const response = await fetch('/api/schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...newItemForm,
+          show_id: showId
+        })
+      })
+
+      if (!response.ok) throw new Error('Failed to create')
+
+      const { data } = await response.json()
+      
+      const updatedItems = sortScheduleItems([...items, data])
+      setItems(updatedItems)
+      
+      const lastDate = newItemForm.date
+      const lastCrew = newItemForm.crew
+      const lastLocation = newItemForm.location
+      
+      setNewItemForm({
+        session_type: 'Session',
+        date: lastDate,
+        start_time: '',
+        end_time: '',
+        name: '',
+        crew: lastCrew,
+        location: lastLocation,
+        notes: ''
+      })
+      
+      setTimeout(() => {
+        quickEntryRefs.current['start_time']?.focus()
+      }, 0)
+      
+      router.refresh()
+    } catch (error) {
+      console.error('Error creating:', error)
+      alert('Failed to create schedule item')
+    }
   }
 
   const handleEdit = (item) => {
@@ -196,6 +341,7 @@ export default function ProductionScheduleTable({ scheduleItems, showId }) {
 
   const handleAddNew = () => {
     setIsAdding(true)
+    setQuickEntryMode(false)
   }
 
   const handleCancelNew = () => {
@@ -206,6 +352,7 @@ export default function ProductionScheduleTable({ scheduleItems, showId }) {
       start_time: '',
       end_time: '',
       name: '',
+      crew: '',
       location: '',
       notes: ''
     })
@@ -235,6 +382,7 @@ export default function ProductionScheduleTable({ scheduleItems, showId }) {
         start_time: '',
         end_time: '',
         name: '',
+        crew: '',
         location: '',
         notes: ''
       })
@@ -246,14 +394,56 @@ export default function ProductionScheduleTable({ scheduleItems, showId }) {
     }
   }
 
-  // Group filtered items by date
   const groupedItems = groupScheduleItemsByDate(filteredItems)
 
   return (
     <>
+      {/* Quick Entry Mode Info Banner */}
+      {quickEntryMode && (
+        <Card className="mb-4 border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950">
+          <CardContent className="flex items-center justify-between p-4">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                  Quick Entry Mode Active
+                </span>
+              </div>
+              <div className="h-4 w-px bg-blue-200 dark:bg-blue-800" />
+              <div className="flex items-center gap-4 text-xs text-blue-700 dark:text-blue-300">
+                <div className="flex items-center gap-1.5">
+                  <Kbd>Tab</Kbd>
+                  <span>Next field</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Kbd>Enter</Kbd>
+                  <span>Save & new</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Kbd>Ctrl</Kbd>
+                  <Kbd>D</Kbd>
+                  <span>Duplicate last</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Kbd>Esc</Kbd>
+                  <span>Exit mode</span>
+                </div>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleQuickEntryMode}
+              className="h-8 w-8 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Filter Bar */}
       <div className="flex items-center gap-2 mb-6">
-        {/* Time Format Toggle */}
         <Button
           variant="outline"
           size="sm"
@@ -266,7 +456,6 @@ export default function ProductionScheduleTable({ scheduleItems, showId }) {
 
         <div className="h-6 w-px bg-border mx-1" />
 
-        {/* Default Filter Buttons */}
         <div className="flex border rounded-md">
           {savedFilters.filter(f => f.is_default).map((filter, idx) => (
             <Button
@@ -284,12 +473,21 @@ export default function ProductionScheduleTable({ scheduleItems, showId }) {
           ))}
         </div>
 
-        {/* Custom Filters + Manage Menu */}
+        <div className="h-6 w-px bg-border mx-1" />
+        
+        <Combobox
+          options={['All Crews', ...CREW_OPTIONS]}
+          value={quickCrewFilter === 'all' ? 'All Crews' : quickCrewFilter}
+          onValueChange={(value) => handleQuickCrewFilter(value === 'All Crews' ? 'all' : value)}
+          placeholder="Filter by crew"
+          searchPlaceholder="Search crews..."
+          className="w-[160px] h-9"
+        />
+
         {(savedFilters.filter(f => !f.is_default).length > 0 || true) && (
           <>
             <div className="h-6 w-px bg-border mx-1" />
             <div className="flex border rounded-md">
-              {/* Custom Filters */}
               {savedFilters.filter(f => !f.is_default).map((filter) => (
                 <Button
                   key={filter.id}
@@ -305,7 +503,6 @@ export default function ProductionScheduleTable({ scheduleItems, showId }) {
                 </Button>
               ))}
 
-              {/* Manage Filters Menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button 
@@ -339,11 +536,17 @@ export default function ProductionScheduleTable({ scheduleItems, showId }) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleAddNew} disabled={isAdding}>
+            <DropdownMenuItem onClick={handleAddNew} disabled={isAdding || quickEntryMode}>
+              <Plus className="mr-2 h-4 w-4" />
               Add Schedule Item
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={toggleQuickEntryMode}>
+              <Zap className="mr-2 h-4 w-4" />
+              {quickEntryMode ? '✓ ' : ''}Quick Entry Mode
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => setShowDateHeaders(!showDateHeaders)}>
+              <CalendarIcon className="mr-2 h-4 w-4" />
               {showDateHeaders ? '✓ ' : ''}Show Date Headers
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -362,6 +565,7 @@ export default function ProductionScheduleTable({ scheduleItems, showId }) {
                   <TableHead className="font-medium">End</TableHead>
                   <TableHead className="font-medium">Name</TableHead>
                   <TableHead className="font-medium">Type</TableHead>
+                  <TableHead className="font-medium">Crew</TableHead>
                   <TableHead className="font-medium">Location</TableHead>
                   <TableHead className="font-medium">Notes</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
@@ -369,30 +573,25 @@ export default function ProductionScheduleTable({ scheduleItems, showId }) {
               </TableHeader>
               <TableBody>
                 {groupedItems.map(({ date, items: dateItems }, groupIdx) => (
-                  <>
-                    {/* Date Header Row */}
+                  <React.Fragment key={date}>
                     {showDateHeaders && (
-                      <TableRow key={`header-${date}`} className="bg-muted/30 hover:bg-muted/30">
-                        <TableCell colSpan={8} className="font-semibold">
+                      <TableRow className="bg-muted/30 hover:bg-muted/30">
+                        <TableCell colSpan={9} className="font-semibold">
                           {formatScheduleDateHeader(date)}
                         </TableCell>
                       </TableRow>
                     )}
 
-                    {/* Items for this date */}
                     {dateItems.map((item) => (
                       <TableRow key={item.id} className="group hover:bg-muted/50">
                         {editingId === item.id ? (
                           // EDIT MODE
                           <>
                             <TableCell>
-                              <input
-                                type="date"
-                                value={editForm.date || ''}
-                                onChange={(e) => 
-                                  setEditForm({...editForm, date: e.target.value})
-                                }
-                                className="w-full px-2 py-1 border rounded"
+                              <DatePicker
+                                value={editForm.date}
+                                onValueChange={(date) => setEditForm({...editForm, date})}
+                                defaultYear={defaultYear}
                               />
                             </TableCell>
                             <TableCell>
@@ -426,23 +625,24 @@ export default function ProductionScheduleTable({ scheduleItems, showId }) {
                               />
                             </TableCell>
                             <TableCell>
-                              <Select
-                                value={editForm.session_type || ''}
-                                onValueChange={(value) => 
-                                  setEditForm({...editForm, session_type: value})
-                                }
-                              >
-                                <SelectTrigger className="w-[140px]">
-                                  <SelectValue placeholder="Type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {SESSION_TYPES.map((type) => (
-                                    <SelectItem key={type} value={type}>
-                                      {type}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <Combobox
+                                options={SESSION_TYPES}
+                                value={editForm.session_type}
+                                onValueChange={(value) => setEditForm({...editForm, session_type: value})}
+                                placeholder="Type"
+                                searchPlaceholder="Search types..."
+                                className="w-[140px]"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Combobox
+                                options={CREW_OPTIONS}
+                                value={editForm.crew}
+                                onValueChange={(value) => setEditForm({...editForm, crew: value})}
+                                placeholder="Crew"
+                                searchPlaceholder="Search crews..."
+                                className="w-[140px]"
+                              />
                             </TableCell>
                             <TableCell>
                               <input
@@ -500,6 +700,9 @@ export default function ProductionScheduleTable({ scheduleItems, showId }) {
                               {item.session_type}
                             </TableCell>
                             <TableCell className="text-muted-foreground text-sm">
+                              {item.crew}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
                               {item.location}
                             </TableCell>
                             <TableCell className="text-muted-foreground text-sm max-w-[300px] truncate">
@@ -519,20 +722,120 @@ export default function ProductionScheduleTable({ scheduleItems, showId }) {
                         )}
                       </TableRow>
                     ))}
-                  </>
+                  </React.Fragment>
                 ))}
 
-                {/* ADD NEW ROW */}
-                {isAdding && (
-                  <TableRow className="bg-accent/50">
+                {/* QUICK ENTRY MODE ROW */}
+                {quickEntryMode && (
+                  <TableRow className="bg-blue-50 dark:bg-blue-950/20 border-t-2 border-blue-200 dark:border-blue-900">
+                    <TableCell>
+                      <DatePicker
+                        value={newItemForm.date}
+                        onValueChange={(date) => setNewItemForm({...newItemForm, date})}
+                        defaultYear={defaultYear}
+                        className="focus:ring-2 focus:ring-blue-500"
+                      />
+                    </TableCell>
                     <TableCell>
                       <input
-                        type="date"
-                        value={newItemForm.date}
+                        ref={(el) => quickEntryRefs.current['start_time'] = el}
+                        type="time"
+                        value={newItemForm.start_time}
                         onChange={(e) => 
-                          setNewItemForm({...newItemForm, date: e.target.value})
+                          setNewItemForm({...newItemForm, start_time: e.target.value})
                         }
-                        className="w-full px-2 py-1 border rounded"
+                        onKeyDown={(e) => handleQuickEntryKeyDown(e, 'start_time')}
+                        className="w-full px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <input
+                        ref={(el) => quickEntryRefs.current['end_time'] = el}
+                        type="time"
+                        value={newItemForm.end_time}
+                        onChange={(e) => 
+                          setNewItemForm({...newItemForm, end_time: e.target.value})
+                        }
+                        onKeyDown={(e) => handleQuickEntryKeyDown(e, 'end_time')}
+                        className="w-full px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <input
+                        ref={(el) => quickEntryRefs.current['name'] = el}
+                        type="text"
+                        value={newItemForm.name}
+                        onChange={(e) => 
+                          setNewItemForm({...newItemForm, name: e.target.value})
+                        }
+                        onKeyDown={(e) => handleQuickEntryKeyDown(e, 'name')}
+                        className="w-full px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500"
+                        placeholder="Session name"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Combobox
+                        options={SESSION_TYPES}
+                        value={newItemForm.session_type}
+                        onValueChange={(value) => setNewItemForm({...newItemForm, session_type: value})}
+                        placeholder="Type"
+                        searchPlaceholder="Search types..."
+                        className="w-[140px] focus:ring-2 focus:ring-blue-500"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Combobox
+                        options={CREW_OPTIONS}
+                        value={newItemForm.crew}
+                        onValueChange={(value) => setNewItemForm({...newItemForm, crew: value})}
+                        placeholder="Crew"
+                        searchPlaceholder="Search crews..."
+                        className="w-[140px] focus:ring-2 focus:ring-blue-500"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <input
+                        ref={(el) => quickEntryRefs.current['location'] = el}
+                        type="text"
+                        value={newItemForm.location}
+                        onChange={(e) => 
+                          setNewItemForm({...newItemForm, location: e.target.value})
+                        }
+                        onKeyDown={(e) => handleQuickEntryKeyDown(e, 'location')}
+                        className="w-full px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500"
+                        placeholder="Location"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <input
+                        ref={(el) => quickEntryRefs.current['notes'] = el}
+                        type="text"
+                        value={newItemForm.notes}
+                        onChange={(e) => 
+                          setNewItemForm({...newItemForm, notes: e.target.value})
+                        }
+                        onKeyDown={(e) => handleQuickEntryKeyDown(e, 'notes')}
+                        className="w-full px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500"
+                        placeholder="Notes"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Kbd className="text-[9px]">↵</Kbd>
+                        <span>Save</span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+
+                {/* REGULAR ADD NEW ROW */}
+                {isAdding && !quickEntryMode && (
+                  <TableRow className="bg-accent/50">
+                    <TableCell>
+                      <DatePicker
+                        value={newItemForm.date}
+                        onValueChange={(date) => setNewItemForm({...newItemForm, date})}
+                        defaultYear={defaultYear}
                       />
                     </TableCell>
                     <TableCell>
@@ -567,23 +870,24 @@ export default function ProductionScheduleTable({ scheduleItems, showId }) {
                       />
                     </TableCell>
                     <TableCell>
-                      <Select
+                      <Combobox
+                        options={SESSION_TYPES}
                         value={newItemForm.session_type}
-                        onValueChange={(value) => 
-                          setNewItemForm({...newItemForm, session_type: value})
-                        }
-                      >
-                        <SelectTrigger className="w-[140px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {SESSION_TYPES.map((type) => (
-                            <SelectItem key={type} value={type}>
-                              {type}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        onValueChange={(value) => setNewItemForm({...newItemForm, session_type: value})}
+                        placeholder="Type"
+                        searchPlaceholder="Search types..."
+                        className="w-[140px]"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Combobox
+                        options={CREW_OPTIONS}
+                        value={newItemForm.crew}
+                        onValueChange={(value) => setNewItemForm({...newItemForm, crew: value})}
+                        placeholder="Crew"
+                        searchPlaceholder="Search crews..."
+                        className="w-[140px]"
+                      />
                     </TableCell>
                     <TableCell>
                       <input
@@ -629,10 +933,10 @@ export default function ProductionScheduleTable({ scheduleItems, showId }) {
                 )}
 
                 {/* EMPTY STATE */}
-                {filteredItems.length === 0 && !isAdding && (
+                {filteredItems.length === 0 && !isAdding && !quickEntryMode && (
                   <TableRow className="hover:bg-transparent">
                     <TableCell 
-                      colSpan={8} 
+                      colSpan={9} 
                       className="h-32 text-center text-muted-foreground"
                     >
                       No schedule items match this filter. Click "Add Schedule Item" to get started.

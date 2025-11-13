@@ -9,7 +9,8 @@ import {
   ChevronRight,
   Calendar, 
   Home,
-  Sparkles
+  Sparkles,
+  Mountain
 } from 'lucide-react'
 import {
   Sidebar,
@@ -67,11 +68,11 @@ export function AppSidebar() {
       <SidebarHeader>
         <Link href="/shows" className="flex items-center gap-2 px-2 py-2 hover:opacity-80 transition-opacity">
           <div className="w-8 h-8 bg-foreground rounded-lg flex items-center justify-center">
-            <Sparkles className="w-5 h-5 text-background" />
+            <Mountain className="w-5 h-5 text-background" />
           </div>
           <div>
-            <h1 className="text-lg font-semibold text-foreground">Cre8ionOS</h1>
-            <p className="text-xs text-muted-foreground">production management</p>
+            <h1 className="text-lg font-semibold text-foreground">cre8ionOS</h1>
+            
           </div>
         </Link>
       </SidebarHeader>
