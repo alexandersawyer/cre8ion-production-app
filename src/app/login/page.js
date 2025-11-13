@@ -83,7 +83,7 @@ export default function LoginPage() {
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
             <p className="text-sm text-muted-foreground text-center">
-              Don't have an account?{' '}
+              No account yet?{' '}
               <Link href="/signup" className="text-foreground hover:underline">
                 Sign up
               </Link>
