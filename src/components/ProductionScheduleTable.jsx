@@ -42,8 +42,7 @@ const SESSION_TYPES = [
   'Cancelled'
 ]
 
-const CREW_OPTIONS = [
-  'Everything',  // Changed from 'All Crews'
+const CREW_EDIT_OPTIONS = [
   'Breakouts',
   'Cre8ion',
   'Featured',
@@ -476,12 +475,12 @@ export default function ProductionScheduleTable({ scheduleItems, showId, showYea
         <div className="h-6 w-px bg-border mx-1" />
         
        <Combobox
-  options={CREW_OPTIONS}
-  value={quickCrewFilter === 'all' ? 'Everything' : quickCrewFilter}
-  onValueChange={(value) => handleQuickCrewFilter(value === 'Everything' ? 'all' : value)}
-  placeholder="Filter by crew"
+  options={CREW_EDIT_OPTIONS}  // Changed from CREW_OPTIONS
+  value={editForm.crew}
+  onValueChange={(value) => setEditForm({...editForm, crew: value})}
+  placeholder="Crew"
   searchPlaceholder="Search crews..."
-  className="w-[160px] h-9"
+  className="w-[140px]"
 />
 
         {(savedFilters.filter(f => !f.is_default).length > 0 || true) && (
@@ -636,13 +635,13 @@ export default function ProductionScheduleTable({ scheduleItems, showId, showYea
                             </TableCell>
                             <TableCell>
                               <Combobox
-                                options={CREW_OPTIONS}
-                                value={editForm.crew}
-                                onValueChange={(value) => setEditForm({...editForm, crew: value})}
-                                placeholder="Crew"
-                                searchPlaceholder="Search crews..."
-                                className="w-[140px]"
-                              />
+  options={CREW_EDIT_OPTIONS}  // Changed from CREW_OPTIONS
+  value={newItemForm.crew}
+  onValueChange={(value) => setNewItemForm({...newItemForm, crew: value})}
+  placeholder="Crew"
+  searchPlaceholder="Search crews..."
+  className="w-[140px] focus:ring-2 focus:ring-blue-500"
+/>
                             </TableCell>
                             <TableCell>
                               <input
@@ -785,13 +784,13 @@ export default function ProductionScheduleTable({ scheduleItems, showId, showYea
                     </TableCell>
                     <TableCell>
                       <Combobox
-                        options={CREW_OPTIONS}
-                        value={newItemForm.crew}
-                        onValueChange={(value) => setNewItemForm({...newItemForm, crew: value})}
-                        placeholder="Crew"
-                        searchPlaceholder="Search crews..."
-                        className="w-[140px] focus:ring-2 focus:ring-blue-500"
-                      />
+  options={CREW_EDIT_OPTIONS}  // Changed from CREW_OPTIONS
+  value={newItemForm.crew}
+  onValueChange={(value) => setNewItemForm({...newItemForm, crew: value})}
+  placeholder="Crew"
+  searchPlaceholder="Search crews..."
+  className="w-[140px]"
+/>
                     </TableCell>
                     <TableCell>
                       <input

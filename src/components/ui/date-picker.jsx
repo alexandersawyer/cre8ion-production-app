@@ -41,7 +41,7 @@ export function DatePicker({ value, onValueChange, defaultYear, className }) {
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal={true}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -55,7 +55,13 @@ export function DatePicker({ value, onValueChange, defaultYear, className }) {
           {value && dateValue ? format(dateValue, "MMM dd, yyyy") : <span>Pick a date</span>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0 z-50" align="start" sideOffset={4}>
+      <PopoverContent 
+        className="w-auto p-0" 
+        align="start" 
+        side="bottom"
+        sideOffset={4}
+        style={{ zIndex: 9999 }}
+      >
         <Calendar
           mode="single"
           selected={dateValue}
