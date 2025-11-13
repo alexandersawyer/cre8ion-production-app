@@ -43,7 +43,7 @@ const SESSION_TYPES = [
 ]
 
 const CREW_OPTIONS = [
-  'All Crews',
+  'Everything',  // Changed from 'All Crews'
   'Breakouts',
   'Cre8ion',
   'Featured',
@@ -475,14 +475,14 @@ export default function ProductionScheduleTable({ scheduleItems, showId, showYea
 
         <div className="h-6 w-px bg-border mx-1" />
         
-        <Combobox
-          options={['All Crews', ...CREW_OPTIONS]}
-          value={quickCrewFilter === 'all' ? 'All Crews' : quickCrewFilter}
-          onValueChange={(value) => handleQuickCrewFilter(value === 'All Crews' ? 'all' : value)}
-          placeholder="Filter by crew"
-          searchPlaceholder="Search crews..."
-          className="w-[160px] h-9"
-        />
+       <Combobox
+  options={CREW_OPTIONS}
+  value={quickCrewFilter === 'all' ? 'Everything' : quickCrewFilter}
+  onValueChange={(value) => handleQuickCrewFilter(value === 'Everything' ? 'all' : value)}
+  placeholder="Filter by crew"
+  searchPlaceholder="Search crews..."
+  className="w-[160px] h-9"
+/>
 
         {(savedFilters.filter(f => !f.is_default).length > 0 || true) && (
           <>
