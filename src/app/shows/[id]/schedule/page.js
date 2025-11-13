@@ -1,12 +1,24 @@
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import { Badge } from '@/components/ui/badge'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb'
+import { SidebarTrigger } from '@/components/ui/sidebar'
+import { Separator } from '@/components/ui/separator'
 import ProductionScheduleTable from '@/components/ProductionScheduleTable'
+import { PublicToggleControls } from '@/components/PublicToggleControls'
 import { getTimezoneAbbr, getCurrentTimeInTimezone } from '@/lib/timezones'
-import { redirect } from 'next/navigation'
 
 export const revalidate = 0
 
-export default async function PublicSchedulePage({ params }) {
+export default async function ProductionSchedulePage({ params }) {
+  // Await params for Next.js 15
   const resolvedParams = await params
   
   // Fetch the show
@@ -15,11 +27,6 @@ export default async function PublicSchedulePage({ params }) {
     .select('*')
     .eq('id', resolvedParams.id)
     .single()
-
-  // If show doesn't exist or isn't public, redirect to login
-  if (!show || !show.is_public) {
-    redirect('/login')
-  }
 
   // Fetch schedule items for this show
   const { data: scheduleItems, error } = await supabase
@@ -33,7 +40,8 @@ export default async function PublicSchedulePage({ params }) {
     console.error('Error fetching schedule:', error)
   }
 
-  // Extract year from show dates
+  // Extract year from show dates for the date picker
+  // Priority: travel_start_date > start_date > current year
   const showYear = show?.travel_start_date 
     ? new Date(show.travel_start_date).getFullYear()
     : show?.start_date
@@ -42,34 +50,27 @@ export default async function PublicSchedulePage({ params }) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Simple header without sidebar */}
-      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex h-16 items-center px-8">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-foreground rounded-lg flex items-center justify-center">
-                <span className="text-background text-sm font-bold">C8</span>
-              </div>
-              <h1 className="text-lg font-semibold">cre8ionOS</h1>
-            </div>
-            <div className="h-6 w-px bg-border" />
-            <div>
-              <div className="flex items-center gap-2">
-                {show.show_shortcode && (
-                  <span className="text-sm font-mono text-muted-foreground">
-                    {show.show_shortcode}
-                  </span>
-                )}
-                <h2 className="text-lg font-semibold">{show.name}</h2>
-              </div>
-            </div>
-          </div>
-          <div className="ml-auto">
-            <Badge variant="secondary" className="text-xs">
-              Public View
-            </Badge>
-          </div>
-        </div>
+      {/* Header with Sidebar Trigger + Breadcrumb */}
+      <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+        <SidebarTrigger className="-ml-1" />
+        <Separator orientation="vertical" className="mr-2 h-4" />
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/shows">Shows</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink href={`/shows/${resolvedParams.id}`}>
+                {show?.name}
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Production Schedule</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
       </header>
 
       {/* Main Content */}
@@ -78,7 +79,7 @@ export default async function PublicSchedulePage({ params }) {
           {/* Page Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-foreground">
-              Production Schedule
+              {show?.show_shortcode ? `${show.show_shortcode} ` : ''}Schedule
             </h1>
             <p className="text-muted-foreground mt-1">
               All times {show?.timezone ? getTimezoneAbbr(show.timezone) : 'Local Time'}
@@ -86,22 +87,22 @@ export default async function PublicSchedulePage({ params }) {
             </p>
           </div>
 
-          {/* Production Schedule - READ ONLY */}
+          {/* Public Access Toggle */}
+          <div className="mb-6">
+            <PublicToggleControls 
+              showId={resolvedParams.id} 
+              initialIsPublic={show?.is_public || false}
+            />
+          </div>
+
+          {/* Pass data to Client Component */}
           <ProductionScheduleTable 
             scheduleItems={scheduleItems || []} 
             showId={resolvedParams.id}
             showYear={showYear}
-            isPublicView={true}
           />
         </div>
       </div>
-
-      {/* Footer */}
-      <footer className="border-t mt-12 py-6">
-        <div className="max-w-7xl mx-auto px-8 text-center text-sm text-muted-foreground">
-          <p>Powered by cre8ionOS</p>
-        </div>
-      </footer>
     </div>
   )
 }
