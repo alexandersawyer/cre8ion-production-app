@@ -4,8 +4,6 @@ import { use, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { Switch } from '@/components/ui/switch'
-import { Link2, Copy, Check } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -27,7 +25,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -89,7 +86,6 @@ export default function ShowDetailPage({ params }) {
   const [deleting, setDeleting] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [copySuccess, setCopySuccess] = useState(false)
   
   // Edit form state - matches database exactly
   const [editForm, setEditForm] = useState({
@@ -257,36 +253,6 @@ export default function ShowDetailPage({ params }) {
       setShowDeleteDialog(false)
     }
   }
-
-  const handleTogglePublic = async (checked) => {
-  try {
-    const { error } = await supabase
-      .from('shows')
-      .update({ is_public: checked })
-      .eq('id', showId)
-
-    if (error) throw error
-
-    await fetchShow()
-  } catch (error) {
-    console.error('Error toggling public status:', error)
-    alert('Failed to update public status')
-  }
-}
-
-const handleCopyPublicLink = async () => {
-  const publicUrl = `${window.location.origin}/public/shows/${showId}/schedule`
-  
-  try {
-    await navigator.clipboard.writeText(publicUrl)
-    setCopySuccess(true)
-    setTimeout(() => setCopySuccess(false), 2000)
-  } catch (error) {
-    console.error('Failed to copy:', error)
-    alert('Failed to copy link')
-  }
-}
-
 
   if (loading) {
     return (
@@ -644,46 +610,17 @@ const handleCopyPublicLink = async () => {
                           <Settings className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                   <DropdownMenuContent align="end" className="w-64">
-  <DropdownMenuItem onClick={handleEdit}>
-    Edit Show
-  </DropdownMenuItem>
-  <DropdownMenuSeparator />
-  <div className="px-2 py-2">
-    <div className="flex items-center justify-between mb-2">
-      <div className="flex items-center gap-2">
-        <Link2 className="h-4 w-4" />
-        <span className="text-sm">Public Access</span>
-      </div>
-      <Switch
-        checked={show.is_public || false}
-        onCheckedChange={handleTogglePublic}
-      />
-    </div>
-    {show.is_public && (
-      <button
-        onClick={handleCopyPublicLink}
-        className="w-full flex items-center justify-between gap-2 px-2 py-1.5 text-xs rounded hover:bg-accent transition-colors"
-      >
-        <span className="text-muted-foreground truncate">
-          /public/shows/{showId}/schedule
-        </span>
-        {copySuccess ? (
-          <Check className="h-3 w-3 text-green-500 flex-shrink-0" />
-        ) : (
-          <Copy className="h-3 w-3 flex-shrink-0" />
-        )}
-      </button>
-    )}
-  </div>
-  <DropdownMenuSeparator />
-  <DropdownMenuItem
-    onClick={() => setShowDeleteDialog(true)}
-    className="text-destructive focus:text-destructive"
-  >
-    Delete Show
-  </DropdownMenuItem>
-</DropdownMenuContent>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={handleEdit}>
+                          Edit Show
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => setShowDeleteDialog(true)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          Delete Show
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
                     </DropdownMenu>
                   </>
                 )}

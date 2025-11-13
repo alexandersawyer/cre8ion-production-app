@@ -12,6 +12,7 @@ import {
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
 import ProductionScheduleTable from '@/components/ProductionScheduleTable'
+import { PublicToggleControls } from '@/components/PublicToggleControls'
 import { getTimezoneAbbr, getCurrentTimeInTimezone } from '@/lib/timezones'
 
 export const revalidate = 0
@@ -84,6 +85,14 @@ export default async function ProductionSchedulePage({ params }) {
               All times {show?.timezone ? getTimezoneAbbr(show.timezone) : 'Local Time'}
               {show?.timezone && ` | Current Local Time: ${getCurrentTimeInTimezone(show.timezone)}`}
             </p>
+          </div>
+
+          {/* Public Access Toggle */}
+          <div className="mb-6">
+            <PublicToggleControls 
+              showId={resolvedParams.id} 
+              initialIsPublic={show?.is_public || false}
+            />
           </div>
 
           {/* Pass data to Client Component */}
