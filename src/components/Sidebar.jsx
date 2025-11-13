@@ -186,63 +186,57 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton className="h-auto py-2">
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-semibold flex-shrink-0">
-                      {getInitials()}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-foreground truncate">
-                        {profile?.full_name || user?.email || 'User'}
-                      </p>
-                      {profile?.role && (
-                        <Badge variant="secondary" className="text-xs mt-0.5">
-                          {profile.role}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  <ChevronDown className="ml-auto w-4 h-4 flex-shrink-0" />
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium">
-                      {profile?.full_name || 'User'}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {user?.email}
-                    </p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="gap-2">
-                  <User className="w-4 h-4" />
-                  <span>Profile</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="gap-2">
-                  <ThemeToggle />
-                  <span>Theme</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  onClick={handleLogout}
-                  className="gap-2 text-destructive focus:text-destructive"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span>Log out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
+     <SidebarFooter>
+  <SidebarMenu>
+    <SidebarMenuItem>
+      <div className="flex items-center gap-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <SidebarMenuButton className="h-auto py-2 flex-1">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-semibold flex-shrink-0">
+                  {getInitials()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {profile?.full_name || user?.email || 'User'}
+                  </p>
+                  {profile?.role && (
+                    <Badge variant="secondary" className="text-xs mt-0.5">
+                      {profile.role}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              <ChevronDown className="ml-auto w-4 h-4 flex-shrink-0" />
+            </SidebarMenuButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium">
+                  {profile?.full_name || 'User'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {user?.email}
+                </p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              onClick={handleLogout}
+              className="gap-2 text-destructive focus:text-destructive"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Log out</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <ThemeToggle />
+      </div>
+    </SidebarMenuItem>
+  </SidebarMenu>
+</SidebarFooter>
     </Sidebar>
   )
 }
