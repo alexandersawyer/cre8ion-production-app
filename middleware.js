@@ -26,7 +26,7 @@ export async function middleware(request) {
         remove(name, options) {
           response.cookies.set({
             name,
-            value: '',
+            value,
             ...options,
           })
         },
@@ -40,9 +40,11 @@ export async function middleware(request) {
   const isAuthPage = request.nextUrl.pathname.startsWith('/login') || 
                      request.nextUrl.pathname.startsWith('/signup') ||
                      request.nextUrl.pathname.startsWith('/auth/callback')
+  
+  const isPublicPage = request.nextUrl.pathname.startsWith('/public')
 
-  // If not logged in and trying to access protected route
-  if (!user && !isAuthPage) {
+  // If not logged in and trying to access protected route (and not public)
+  if (!user && !isAuthPage && !isPublicPage) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
