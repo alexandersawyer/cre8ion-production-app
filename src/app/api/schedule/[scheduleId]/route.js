@@ -18,6 +18,7 @@ export async function PATCH(request, { params }) {
         start_time: body.start_time,
         end_time: body.end_time,
         name: body.name,
+        crew: body.crew, 
         location: body.location,
         notes: body.notes,
       })

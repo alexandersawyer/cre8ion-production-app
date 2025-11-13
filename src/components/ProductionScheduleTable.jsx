@@ -42,6 +42,16 @@ const SESSION_TYPES = [
   'Cancelled'
 ]
 
+const CREW_OPTIONS = [
+  'Everything',
+  'Breakouts',
+  'Cre8ion',
+  'Featured',
+  'Main Stage',
+  'Reception / Parties',
+  'Second Stage'
+]
+
 const CREW_EDIT_OPTIONS = [
   'Breakouts',
   'Cre8ion',
@@ -76,11 +86,8 @@ export default function ProductionScheduleTable({ scheduleItems, showId, showYea
     notes: ''
   })
 
-  // Refs for keyboard navigation
   const dateInputRef = useRef(null)
   const quickEntryRefs = useRef({})
-
-  // Determine default year for date picker
   const defaultYear = showYear || new Date().getFullYear()
 
   const sortScheduleItems = (itemsToSort) => {
@@ -109,7 +116,6 @@ export default function ProductionScheduleTable({ scheduleItems, showId, showYea
     }
   }, [])
 
-  // Load showDateHeaders from localStorage after mount to avoid hydration mismatch
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('showDateHeaders')
@@ -119,7 +125,6 @@ export default function ProductionScheduleTable({ scheduleItems, showId, showYea
     }
   }, [])
 
-  // Save date headers preference when it changes
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('showDateHeaders', showDateHeaders.toString())
@@ -397,7 +402,6 @@ export default function ProductionScheduleTable({ scheduleItems, showId, showYea
 
   return (
     <>
-      {/* Quick Entry Mode Info Banner */}
       {quickEntryMode && (
         <Card className="mb-4 border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950">
           <CardContent className="flex items-center justify-between p-4">
@@ -441,7 +445,6 @@ export default function ProductionScheduleTable({ scheduleItems, showId, showYea
         </Card>
       )}
 
-      {/* Filter Bar */}
       <div className="flex items-center gap-2 mb-6">
         <Button
           variant="outline"
@@ -474,14 +477,14 @@ export default function ProductionScheduleTable({ scheduleItems, showId, showYea
 
         <div className="h-6 w-px bg-border mx-1" />
         
-       <Combobox
-  options={CREW_EDIT_OPTIONS}  // Changed from CREW_OPTIONS
-  value={editForm.crew}
-  onValueChange={(value) => setEditForm({...editForm, crew: value})}
-  placeholder="Crew"
-  searchPlaceholder="Search crews..."
-  className="w-[140px]"
-/>
+        <Combobox
+          options={CREW_OPTIONS}
+          value={quickCrewFilter === 'all' ? 'Everything' : quickCrewFilter}
+          onValueChange={(value) => handleQuickCrewFilter(value === 'Everything' ? 'all' : value)}
+          placeholder="Filter by crew"
+          searchPlaceholder="Search crews..."
+          className="w-[160px] h-9"
+        />
 
         {(savedFilters.filter(f => !f.is_default).length > 0 || true) && (
           <>
@@ -527,7 +530,6 @@ export default function ProductionScheduleTable({ scheduleItems, showId, showYea
 
         <div className="flex-1" />
 
-        {/* Actions Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm">
@@ -552,7 +554,6 @@ export default function ProductionScheduleTable({ scheduleItems, showId, showYea
         </DropdownMenu>
       </div>
 
-      {/* Single Continuous Table */}
       <Card className="border shadow-sm">
         <CardContent className="p-0">
           <div className="rounded-md border">
@@ -584,7 +585,6 @@ export default function ProductionScheduleTable({ scheduleItems, showId, showYea
                     {dateItems.map((item) => (
                       <TableRow key={item.id} className="group hover:bg-muted/50">
                         {editingId === item.id ? (
-                          // EDIT MODE
                           <>
                             <TableCell>
                               <DatePicker
@@ -635,13 +635,13 @@ export default function ProductionScheduleTable({ scheduleItems, showId, showYea
                             </TableCell>
                             <TableCell>
                               <Combobox
-  options={CREW_EDIT_OPTIONS}  // Changed from CREW_OPTIONS
-  value={newItemForm.crew}
-  onValueChange={(value) => setNewItemForm({...newItemForm, crew: value})}
-  placeholder="Crew"
-  searchPlaceholder="Search crews..."
-  className="w-[140px] focus:ring-2 focus:ring-blue-500"
-/>
+                                options={CREW_EDIT_OPTIONS}
+                                value={editForm.crew}
+                                onValueChange={(value) => setEditForm({...editForm, crew: value})}
+                                placeholder="Crew"
+                                searchPlaceholder="Search crews..."
+                                className="w-[140px]"
+                              />
                             </TableCell>
                             <TableCell>
                               <input
@@ -683,7 +683,6 @@ export default function ProductionScheduleTable({ scheduleItems, showId, showYea
                             </TableCell>
                           </>
                         ) : (
-                          // VIEW MODE
                           <>
                             <TableCell className="font-medium text-sm">
                               {formatScheduleDate(item.date)}
@@ -724,7 +723,6 @@ export default function ProductionScheduleTable({ scheduleItems, showId, showYea
                   </React.Fragment>
                 ))}
 
-                {/* QUICK ENTRY MODE ROW */}
                 {quickEntryMode && (
                   <TableRow className="bg-blue-50 dark:bg-blue-950/20 border-t-2 border-blue-200 dark:border-blue-900">
                     <TableCell>
@@ -784,13 +782,13 @@ export default function ProductionScheduleTable({ scheduleItems, showId, showYea
                     </TableCell>
                     <TableCell>
                       <Combobox
-  options={CREW_EDIT_OPTIONS}  // Changed from CREW_OPTIONS
-  value={newItemForm.crew}
-  onValueChange={(value) => setNewItemForm({...newItemForm, crew: value})}
-  placeholder="Crew"
-  searchPlaceholder="Search crews..."
-  className="w-[140px]"
-/>
+                        options={CREW_EDIT_OPTIONS}
+                        value={newItemForm.crew}
+                        onValueChange={(value) => setNewItemForm({...newItemForm, crew: value})}
+                        placeholder="Crew"
+                        searchPlaceholder="Search crews..."
+                        className="w-[140px] focus:ring-2 focus:ring-blue-500"
+                      />
                     </TableCell>
                     <TableCell>
                       <input
@@ -827,7 +825,6 @@ export default function ProductionScheduleTable({ scheduleItems, showId, showYea
                   </TableRow>
                 )}
 
-                {/* REGULAR ADD NEW ROW */}
                 {isAdding && !quickEntryMode && (
                   <TableRow className="bg-accent/50">
                     <TableCell>
@@ -880,7 +877,7 @@ export default function ProductionScheduleTable({ scheduleItems, showId, showYea
                     </TableCell>
                     <TableCell>
                       <Combobox
-                        options={CREW_OPTIONS}
+                        options={CREW_EDIT_OPTIONS}
                         value={newItemForm.crew}
                         onValueChange={(value) => setNewItemForm({...newItemForm, crew: value})}
                         placeholder="Crew"
@@ -931,14 +928,13 @@ export default function ProductionScheduleTable({ scheduleItems, showId, showYea
                   </TableRow>
                 )}
 
-                {/* EMPTY STATE */}
                 {filteredItems.length === 0 && !isAdding && !quickEntryMode && (
                   <TableRow className="hover:bg-transparent">
                     <TableCell 
                       colSpan={9} 
                       className="h-32 text-center text-muted-foreground"
                     >
-                      No schedule items match this filter. Click "Add Schedule Item" to get started.
+                      No schedule items match this filter. Click Add Schedule Item to get started.
                     </TableCell>
                   </TableRow>
                 )}
