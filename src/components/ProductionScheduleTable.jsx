@@ -20,10 +20,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { MoreHorizontal, Clock, Pencil, Filter, Zap, X, Plus, Calendar as CalendarIcon } from 'lucide-react'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { MoreHorizontal, Clock, Pencil, Zap, X, Plus, Calendar as CalendarIcon } from 'lucide-react'
 import { Kbd } from '@/components/ui/kbd'
 import { Combobox } from '@/components/ui/combobox'
 import { DatePicker } from '@/components/ui/date-picker'
+import { EditScheduleItemModal } from '@/components/EditScheduleItemModal'
 import { formatTime } from '@/lib/time-utils'
 import { formatScheduleDate, formatScheduleDateHeader, groupScheduleItemsByDate } from '@/lib/date-utils'
 
@@ -65,8 +72,8 @@ export default function ProductionScheduleTable({ scheduleItems, showId, showYea
   const router = useRouter()
   const [items, setItems] = useState(scheduleItems)
   const [filteredItems, setFilteredItems] = useState(scheduleItems)
-  const [editingId, setEditingId] = useState(null)
-  const [editForm, setEditForm] = useState({})
+  const [editingItem, setEditingItem] = useState(null)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
   const [quickEntryMode, setQuickEntryMode] = useState(false)
   const [timeFormat, setTimeFormat] = useState('24hr')
@@ -308,33 +315,121 @@ export default function ProductionScheduleTable({ scheduleItems, showId, showYea
   }
 
   const handleEdit = (item) => {
-    setEditingId(item.id)
-    setEditForm(item)
+    setEditingItem(item)
+    setIsEditModalOpen(true)
   }
 
-  const handleCancel = () => {
-    setEditingId(null)
-    setEditForm({})
-  }
-
-  const handleSave = async () => {
+  const handleDelete = async (itemId) => {
     try {
-      const response = await fetch(`/api/schedule/${editingId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editForm)
+      const response = await fetch(`/api/schedule/${itemId}`, {
+        method: 'DELETE'
       })
 
-      if (!response.ok) throw new Error('Failed to update')
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to delete')
+      }
 
-      const { data } = await response.json()
-      
-      const updatedItems = sortScheduleItems(
-        items.map(item => item.id === editingId ? data : item)
-      )
+      // Remove item from local state
+      const updatedItems = items.filter(item => item.id !== itemId)
       setItems(updatedItems)
-      setEditingId(null)
-      setEditForm({})
+      
+      router.refresh()
+    } catch (error) {
+      console.error('Error deleting:', error)
+      throw error // Re-throw so modal can show error
+    }
+  }
+
+  const handleSaveEdit = async (formData, shouldDuplicate = false) => {
+    try {
+      // Check if this is a new item (no ID) or editing existing
+      const isNewItem = !editingItem.id
+      
+      if (isNewItem) {
+        // Create new item
+        const response = await fetch('/api/schedule', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...formData,
+            show_id: showId,
+            crew: formData.crew || null,
+            end_time: formData.end_time || null
+          })
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to create')
+        }
+
+        const { data } = await response.json()
+        const updatedItems = sortScheduleItems([...items, data])
+        setItems(updatedItems)
+        
+        if (shouldDuplicate) {
+          // Keep modal open with a fresh duplicate
+          setEditingItem({
+            id: null,
+            ...formData,
+            name: '',
+            notes: ''
+          })
+        } else {
+          setIsEditModalOpen(false)
+          setEditingItem(null)
+        }
+      } else {
+        // Update existing item
+        const response = await fetch(`/api/schedule/${editingItem.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...formData,
+            crew: formData.crew || null,
+            end_time: formData.end_time || null
+          })
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to update')
+        }
+
+        const { data } = await response.json()
+        
+        const updatedItems = sortScheduleItems(
+          items.map(item => item.id === editingItem.id ? data : item)
+        )
+        setItems(updatedItems)
+        
+        if (shouldDuplicate) {
+          // Create a duplicate
+          const duplicateResponse = await fetch('/api/schedule', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...formData,
+              show_id: showId,
+              name: '',
+              notes: '',
+              crew: formData.crew || null,
+              end_time: formData.end_time || null
+            })
+          })
+
+          if (duplicateResponse.ok) {
+            const { data: duplicateData } = await duplicateResponse.json()
+            const withDuplicate = sortScheduleItems([...updatedItems, duplicateData])
+            setItems(withDuplicate)
+            setEditingItem(duplicateData)
+          }
+        } else {
+          setIsEditModalOpen(false)
+          setEditingItem(null)
+        }
+      }
       
       router.refresh()
     } catch (error) {
@@ -344,8 +439,20 @@ export default function ProductionScheduleTable({ scheduleItems, showId, showYea
   }
 
   const handleAddNew = () => {
-    setIsAdding(true)
-    setQuickEntryMode(false)
+    // Create a new empty item for the modal
+    const newItem = {
+      id: null, // No ID for new items
+      session_type: 'Session',
+      date: '',
+      start_time: '',
+      end_time: '',
+      name: '',
+      crew: '',
+      location: '',
+      notes: ''
+    }
+    setEditingItem(newItem)
+    setIsEditModalOpen(true)
   }
 
   const handleCancelNew = () => {
@@ -401,7 +508,7 @@ export default function ProductionScheduleTable({ scheduleItems, showId, showYea
   const groupedItems = groupScheduleItemsByDate(filteredItems)
 
   return (
-    <>
+    <TooltipProvider>
       {quickEntryMode && (
         <Card className="mb-4 border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950">
           <CardContent className="flex items-center justify-between p-4">
@@ -564,9 +671,9 @@ export default function ProductionScheduleTable({ scheduleItems, showId, showYea
                   <TableHead className="font-medium">Start</TableHead>
                   <TableHead className="font-medium">End</TableHead>
                   <TableHead className="font-medium">Name</TableHead>
-                  <TableHead className="font-medium">Type</TableHead>
-                  <TableHead className="font-medium">Crew</TableHead>
-                  <TableHead className="font-medium">Location</TableHead>
+                  <TableHead className="font-medium min-w-[120px]">Type</TableHead>
+                  <TableHead className="font-medium min-w-[140px]">Crew</TableHead>
+                  <TableHead className="font-medium min-w-[140px]">Location</TableHead>
                   <TableHead className="font-medium">Notes</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
@@ -584,140 +691,54 @@ export default function ProductionScheduleTable({ scheduleItems, showId, showYea
 
                     {dateItems.map((item) => (
                       <TableRow key={item.id} className="group hover:bg-muted/50">
-                        {editingId === item.id ? (
-                          <>
-                            <TableCell>
-                              <DatePicker
-                                value={editForm.date}
-                                onValueChange={(date) => setEditForm({...editForm, date})}
-                                defaultYear={defaultYear}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <input
-                                type="time"
-                                value={editForm.start_time || ''}
-                                onChange={(e) => 
-                                  setEditForm({...editForm, start_time: e.target.value})
-                                }
-                                className="w-full px-2 py-1 border rounded"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <input
-                                type="time"
-                                value={editForm.end_time || ''}
-                                onChange={(e) => 
-                                  setEditForm({...editForm, end_time: e.target.value})
-                                }
-                                className="w-full px-2 py-1 border rounded"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <input
-                                type="text"
-                                value={editForm.name || ''}
-                                onChange={(e) => 
-                                  setEditForm({...editForm, name: e.target.value})
-                                }
-                                className="w-full px-2 py-1 border rounded"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Combobox
-                                options={SESSION_TYPES}
-                                value={editForm.session_type}
-                                onValueChange={(value) => setEditForm({...editForm, session_type: value})}
-                                placeholder="Type"
-                                searchPlaceholder="Search types..."
-                                className="w-[140px]"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Combobox
-                                options={CREW_EDIT_OPTIONS}
-                                value={editForm.crew}
-                                onValueChange={(value) => setEditForm({...editForm, crew: value})}
-                                placeholder="Crew"
-                                searchPlaceholder="Search crews..."
-                                className="w-[140px]"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <input
-                                type="text"
-                                value={editForm.location || ''}
-                                onChange={(e) => 
-                                  setEditForm({...editForm, location: e.target.value})
-                                }
-                                className="w-full px-2 py-1 border rounded"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <input
-                                type="text"
-                                value={editForm.notes || ''}
-                                onChange={(e) => 
-                                  setEditForm({...editForm, notes: e.target.value})
-                                }
-                                className="w-full px-2 py-1 border rounded"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex gap-2">
-                                <Button 
-                                  onClick={handleSave}
-                                  variant="outline"
-                                  size="sm"
-                                >
-                                  Save
-                                </Button>
-                                <Button 
-                                  onClick={handleCancel}
-                                  variant="ghost" 
-                                  size="sm"
-                                >
-                                  Cancel
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </>
-                        ) : (
-                          <>
-                            <TableCell className="font-medium text-sm">
-                              {formatScheduleDate(item.date)}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground text-sm">
-                              {formatTime(item.start_time, timeFormat === '24hr')}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground text-sm">
-                              {formatTime(item.end_time, timeFormat === '24hr')}
-                            </TableCell>
-                            <TableCell className="text-sm">{item.name}</TableCell>
-                            <TableCell className="text-muted-foreground text-sm">
-                              {item.session_type}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground text-sm">
-                              {item.crew}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground text-sm">
-                              {item.location}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground text-sm max-w-[300px] truncate">
-                              {item.notes}
-                            </TableCell>
-                            <TableCell>
-                              <Button 
-                                onClick={() => handleEdit(item)}
-                                variant="ghost" 
-                                size="sm"
-                                className="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-accent"
+                        <TableCell className="font-medium text-sm">
+                          {formatScheduleDate(item.date)}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                          {formatTime(item.start_time, timeFormat === '24hr')}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                          {formatTime(item.end_time, timeFormat === '24hr')}
+                        </TableCell>
+                        <TableCell className="text-sm">{item.name}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                          {item.session_type}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                          {item.crew}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                          {item.location}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm max-w-[300px]">
+                          {item.notes && item.notes.length > 50 ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="truncate block cursor-help">
+                                  {item.notes}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent 
+                                side="top" 
+                                className="max-w-md whitespace-normal bg-popover text-popover-foreground"
                               >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </>
-                        )}
+                                <p className="text-sm">{item.notes}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <span>{item.notes}</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Button 
+                            onClick={() => handleEdit(item)}
+                            variant="ghost" 
+                            size="sm"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-accent"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </React.Fragment>
@@ -943,6 +964,15 @@ export default function ProductionScheduleTable({ scheduleItems, showId, showYea
           </div>
         </CardContent>
       </Card>
-    </>
+
+      <EditScheduleItemModal
+        item={editingItem}
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        onSave={handleSaveEdit}
+        onDelete={handleDelete}
+        defaultYear={defaultYear}
+      />
+    </TooltipProvider>
   )
 }

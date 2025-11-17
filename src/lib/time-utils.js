@@ -31,6 +31,6 @@ export function format12hrTo24hr(time12) {
 
 // Format time based on user preference
 export function formatTime(time24, use24hr = true) {
-  if (!time24) return ''
+  if (!time24) return '—'
   return use24hr ? time24 : format24hrTo12hr(time24)
 }
